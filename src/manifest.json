@@ -1,0 +1,20 @@
+{
+    "manifest_version": 2,
+    "name": "AmazonPrice",
+    "version": "0.1",
+    "description": "Converts prices to TRY",
+    "icons": { "256": "icon.png" },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.amazon.com/*",
+                "https://www.amazon.co.uk/*",
+                "https://www.amazon.de/*",
+                "https://www.amazon.es/*",
+                "https://www.amazon.it/*"
+            ],
+            "include_globs": [ "*amazon.*/dp/*" ],
+            "js": [ "AmazonPrice.js" ]
+        }
+    ]
+}
