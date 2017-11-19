@@ -103,13 +103,6 @@ declare function GM_getResourceURL(resourceName: string): string;
 ////////////////
 
 /**
- * Adds CSS to the content page.
- * @param  css  a CSS string. It can have multiple style definitions.
- * @see    {@link http://wiki.greasespot.net/GM_addStyle}
- */
-declare function GM_addStyle(css: string): void;
-
-/**
  * Writes a message as a log to the console with the script identifier.
  * @param  message  a message to be written.
  * @see    {@link http://wiki.greasespot.net/GM_log}
@@ -123,16 +116,6 @@ declare function GM_log(message: any): void;
  * @see      {@link http://wiki.greasespot.net/GM_openInTab}
  */
 declare function GM_openInTab(url: string): Window;
-
-/**
- * Registers an item as a submenu of User Script Commands.
- * @param  caption      a caption of the menu item.
- * @param  commandFunc  a function to be invoked when the item has been selected.
- * @param  accessKey    a single character that can be used to select the item by keyboard.
- *                      It should be a letter in the caption.
- * @see    {@link http://wiki.greasespot.net/GM_registerMenuCommand}
- */
-declare function GM_registerMenuCommand(caption: string, commandFunc: Function, accessKey?: string): void;
 
 /**
  * Sets a text to the clipboard of the opeating system.
