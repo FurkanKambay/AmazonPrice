@@ -17,61 +17,58 @@
 
 // @ts-check
 /// <reference path="greasemonkey.d.ts" />
+"use strict";
 
-const $ = id => document.getElementById(id);
+GM_log("AmazonPrice started.");
+if (document.getElementById("price")) {
+    var $ = id => document.getElementById(id),
+        rates,
+        toCurr,
+        priceRegex = /\d{0,3}([,\.])?(?:\d{3})?[,\.]\d{2}/,
+        ext = window.location.host.match(/amazon\.(.+)/)[1],
+        extCurrencies = {
+            "com": "USD",
+            "com.au": "AUD", // See issue #2 "Book prices"
+            "com.br": "BRL",
+            "com.mx": "MXN",
+            "co.uk": "GBP",
+            "ca": "CAD",
+            "es": "EUR",
+            "it": "EUR",
+            "fr": "EUR",
+            "de": "EUR",
+            "nl": "EUR", // See issue #2 "Book prices"
+            "in": "INR", // no price
+            "jp": "JPY",
+            "cn": "CNY"
+        }[ext];
+    sendXHR();
+} else GM_log("There is no price information! Cannot continue.");
 
-var rates;
-var toCurr;
-const priceRegex = /\d{0,3}([,\.])?(?:\d{3})?[,\.]\d{2}/;
-const ext = window.location.host.match(/amazon\.(.+)/)[1];
-
-(function () {
-    'use strict';
-    GM_log("AmazonPrice started.");
-
-    if (!navigator.onLine) {
-        GM_log("There is no internet connection! Cannot continue.");
-        return;
-    }
-    if (!document.getElementById("price")) {
-        GM_log("There is no price information! Cannot continue.");
-        return;
-    }
-
-    const siteCurr = {
-        "com.au": "AUD", // See issue #2 "Book prices"
-        "com.br": "BRL",
-        "ca": "CAD",
-        "cn": "CNY",
-        "fr": "EUR",
-        "de": "EUR",
-        "in": "INR", // no price
-        "it": "EUR",
-        "jp": "JPY",
-        "com.mx": "MXN",
-        "nl": "EUR", // See issue #2 "Book prices"
-        "es": "EUR",
-        "co.uk": "GBP",
-        "com": "USD"
-    }[ext];
-
-    GM_log("Getting the currency rate.");
+function sendXHR() {
+    GM_log("Getting the currency rates.");
     GM_xmlhttpRequest({
         method: "GET",
-        url: "https://api.fixer.io/latest?base=" + siteCurr,
+        url: "https://api.fixer.io/latest?base=" + extCurrencies,
         onload: response => {
             rates = JSON.parse(response.responseText).rates;
-            rates[siteCurr] = 1;
-            GM_log(rates);
+            rates[extCurrencies] = 1;
             getCurrency();
-            writeFinalPrice();
-        }
+            determinePrice();
+        },
+        onerror: err => GM_log(err.responseText)
     });
-})();
+}
 
-function writeFinalPrice() {
-    'use strict';
+function getCurrency() {
+    if (!(toCurr = GM_getValue("currency"))) {
+        while (!rates.hasOwnProperty(toCurr))
+            toCurr = prompt("Please enter your local currency code (e.g. EUR):").toUpperCase();
+        GM_setValue("currency", toCurr);
+    }
+}
 
+function determinePrice() {
     let theOne = $("priceblock_ourprice") || $("priceblock_dealprice") || $("priceblock_saleprice"),
         priceText = theOne.textContent.match(priceRegex),
         price = parseFloat(priceText[0].replace(priceText[1], '').replace(',', '.')),
@@ -86,24 +83,24 @@ function writeFinalPrice() {
         }
     }
 
-    let totalRow = document.querySelector("#price tbody").appendChild(document.createElement("tr"));
-    let desc = totalRow.insertCell(),
+    appendPrice(priceMessage, price + shippingPrice);
+}
+
+function appendPrice(priceDesc, priceVal) {
+    let totalRow = document.querySelector("#price tbody").appendChild(document.createElement("tr")),
+        desc = totalRow.insertCell(),
         val = totalRow.insertCell();
 
     desc.className = "a-color-secondary a-size-large a-text-right a-nowrap";
-    desc.textContent = priceMessage;
+    desc.textContent = priceDesc;
 
     val.className = "a-span12 a-color-price a-size-large";
-    val.appendChild(document.createTextNode((rates[toCurr] * (price + shippingPrice)).toFixed(2).concat(" ")));
+    val.textContent = (rates[toCurr] * priceVal).toFixed(2).concat(" ");
     let currSymbol = val.appendChild(document.createElement("span"));
 
-    currSymbol.setAttribute("style", "text-decoration: underline dotted;");
-    currSymbol.onclick = ev => {
-        GM_setValue("currency", null);
-        getCurrency();
-        totalRow.remove();
-        writeFinalPrice();
-    };
+    currSymbol.style.textDecoration = "underline dotted";
+    currSymbol.title = "Change currency";
+    currSymbol.onclick = e => resetCurrency(totalRow);
     currSymbol.textContent = toCurr;
 
     let delivery = $("ddmDeliveryMessage") || $("fast-track-message");
@@ -113,11 +110,9 @@ function writeFinalPrice() {
         val.classList.add("a-text-strike");
 }
 
-function getCurrency() {
-    toCurr = GM_getValue("currency");
-    if (!toCurr) {
-        while (!rates.hasOwnProperty(toCurr))
-            toCurr = prompt("Please enter your local currency code (e.g. EUR):").toUpperCase();
-        GM_setValue("currency", toCurr);
-    }
+function resetCurrency(priceRow) {
+    GM_setValue("currency", null);
+    getCurrency();
+    priceRow.remove();
+    determinePrice();
 }
